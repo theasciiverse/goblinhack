@@ -64,7 +64,14 @@ typedef enum gh_term_color_ {
 
 } gh_term_color;
 
+#ifdef GHACK_TERMINAL
+//
+// In a terminal the console grows with it, up to 200 by 100.
+//
+#define GH_TERM_MAX_SIZE 200
+#else
 #define GH_TERM_MAX_SIZE 100
+#endif
 #define GH_TERM_HEIGHT gh_term_screen_height
 #define GH_TERM_WIDTH gh_term_screen_width
 
@@ -96,6 +103,7 @@ extern gh_term_color random_bg;
 
 extern void gh_term_init(void);
 extern void gh_term_exit(void);
+extern int gh_term_list_rows(int wanted);
 extern void gh_term_refresh(void);
 extern void gh_term_scroll(void);
 extern void gh_term_refresh_small(void);

@@ -157,7 +157,13 @@ void gh_myscreen::display (void)
             " friend to enter the lair of the Goblins!");
     }
 
-    if ((game->frame >= intro_section[0]) &&
+    //
+    // A console shorter than 46 rows has no room for the verse and the
+    // keys at once: the keys go one to a row, and the verse waits for them.
+    //
+    const bool short_console = GH_TERM_HEIGHT < 46;
+
+    if ((game->frame >= (short_console ? intro_section[1] : intro_section[0])) &&
         (game->frame < intro_section[3])) {
 
         y = GH_TERM_HEIGHT - 13;
@@ -195,7 +201,9 @@ void gh_myscreen::display (void)
         gh_term_putfmx("Thy mighty keys of destiny control:");
         gh_term_goto(0, y++);
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -203,7 +211,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "to stalk the dungeon       ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -211,7 +221,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "to slash, hack, and fire   ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -219,7 +231,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "to open doors              ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -227,7 +241,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "to select carried items    ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -235,7 +251,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "use items                  ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -243,7 +261,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "drop items                 ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -251,7 +271,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "pause / pay when in shops  ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
 
         if (gh_global::music && gh_global::sound) {
@@ -274,7 +296,9 @@ void gh_myscreen::display (void)
             "music ON                   ");
         }
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
 
         gh_term_putfmx(
@@ -283,7 +307,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "Level editor mode          ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
@@ -291,14 +317,18 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "to load / save             ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
         gh_term_putfmx(
         "%%fg=green%%bg=black"
         "        c                  "
         "%%fg=white%%bg=black"
         "Setup                      ");
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
 
         gh_term_putfmx(
@@ -307,7 +337,9 @@ void gh_myscreen::display (void)
         "%%fg=white%%bg=black"
         "Help                       ");
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
     }
 

@@ -316,7 +316,7 @@ gh_event_ret gh_ui_new_player_class_chooser_loop (gh_game *game)
         screen.at = 0;
     }
 
-    screen.how_many = 14;
+    screen.how_many = gh_term_list_rows(14);
     screen.chose = "";
 
     //

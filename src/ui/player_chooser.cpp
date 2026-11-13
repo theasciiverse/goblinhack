@@ -316,7 +316,7 @@ gh_event_ret gh_ui_new_player_chooser_loop (gh_game *game)
     screen.playerdir = gh_global::locatedir("saved");
     screen.base = 0;
     screen.at = 0;
-    screen.how_many = 10;
+    screen.how_many = gh_term_list_rows(10);
     screen.chose = "";
     screen.files = gh_global::listdir_recursive(screen.playerdir, "");
 

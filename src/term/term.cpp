@@ -75,6 +75,22 @@ void gh_term_init (void)
 #endif
 }
 
+//
+// How many entries of a two-row list fit between a screen's banner and its
+// prompt: the full count on a 46-row console, fewer (and the list scrolls)
+// on a shorter one.
+//
+int gh_term_list_rows (int wanted)
+{
+    int fit = (GH_TERM_HEIGHT - 12) / 2;
+
+    if (fit < 3) {
+	fit = 3;
+    }
+
+    return (wanted < fit ? wanted : fit);
+}
+
 void gh_term_exit (void)
 {
     GH_FUNCTION()
@@ -433,6 +449,13 @@ void gh_term_text_box (list<string> &l,
 	    gh_term_putc(' ');
 	}
     }
+
+#ifdef GHACK_TERMINAL
+    //
+    // A box hides what is under it, even where it is blank.
+    //
+    render_opaque(start_x - 1, start_y - 1, end_x, end_y);
+#endif
 
     start_x --;
     start_y --;

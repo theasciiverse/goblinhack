@@ -19,6 +19,7 @@
  * Neil McGill's Zorbash (theasciiverse/zorbash, src/terminal.cpp).
  */
 #include "terminal.h"
+#include "ghack_render.h"
 #include "ghack_sdl_shim.h"
 
 #include <algorithm>
@@ -513,6 +514,15 @@ static void term_key_event(int key, int mods, int event)
         terminal_log("ctrl-c: quit");
         terminal_fini();
         exit(0);
+    }
+
+    /* Tab switches the map between one character a square and the pictures */
+    if (key == 9 && !(mods & ~1) && event == 1) {
+        render_toggle_zoom();
+        return;
+    }
+    if (key == 9 && event != 1) {
+        return;
     }
 
     SDL_keysym ks;

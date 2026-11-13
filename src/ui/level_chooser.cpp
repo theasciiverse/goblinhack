@@ -442,7 +442,7 @@ gh_event_ret gh_ui_new_level_chooser_loop (gh_game *game)
     screen.listing = gh_global::listdir(screen.dir);
     screen.base = 0;
     screen.at = 0;
-    screen.how_many = 15;
+    screen.how_many = gh_term_list_rows(15);
     screen.chose = "";
     screen.bottom_level = false;
     screen.read_input = false;

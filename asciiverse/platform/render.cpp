@@ -50,6 +50,9 @@ static int      render_map_h;
 
 static uint32_t render_snapshot_ms;
 
+static bool render_zoom;
+static void render_zoom_map(gh_level *level, gh_thing *hero, const float *radii, int rays);
+
 static term_rgb rgb_of(uint8 color)
 {
     const gh_pixel *p = console.color_to_pixel(color);
@@ -65,6 +68,18 @@ static term_rgb dim(term_rgb c, int pct)
 
 static bool is_black(term_rgb c) { return c.r < 16 && c.g < 16 && c.b < 16; }
 
+/* console boxes drawn this frame: blank cells in them still cover the map */
+static bool render_opaque_cells[GH_TERM_MAX_SIZE][GH_TERM_MAX_SIZE / 2];
+
+void render_opaque(int x0, int y0, int x1, int y1)
+{
+    for (int x = std::max(0, x0); x <= x1 && x < GH_TERM_MAX_SIZE; x++) {
+        for (int y = std::max(0, y0); y <= y1 && y < GH_TERM_MAX_SIZE / 2; y++) {
+            render_opaque_cells[x][y] = true;
+        }
+    }
+}
+
 void render_capture_term(void)
 {
     for (int x = 0; x < GH_TERM_WIDTH && x < GH_TERM_MAX_SIZE; x++) {
@@ -73,7 +88,7 @@ void render_capture_term(void)
             if (!c->c) {
                 continue;
             }
-            if (c->c == ' ' && c->bg == GH_TERM_COLOR_BLACK) {
+            if (c->c == ' ' && c->bg == GH_TERM_COLOR_BLACK && !render_opaque_cells[x][y]) {
                 continue;
             }
             render_term[x][y]     = *c;
@@ -293,6 +308,57 @@ static bool in_light(gh_level *level, const gh_point3d &p, const float *radii, i
     return d <= radii[ray] + res / 3;
 }
 
+/*
+ * display_map()'s rules for what may be shown: things in sight this frame,
+ * things in lit rooms, the floor under the hero's light, and remembered
+ * walls, floor, water, doors and exits (not lit). The rank puts the hero
+ * over monsters over items over the floor.
+ */
+static bool thing_seen(gh_thing *t, bool light, bool mem, bool *lit_out, int *rank_out)
+{
+    if (!t || !t->anim_frames) {
+        return false;
+    }
+    /* shielded things flicker; the hero only changes colour */
+    if (t->shielded() && !t->is_hero && (SDL_GetTicks() / 120) % 2) {
+        return false;
+    }
+    const gh_anim_frame *a = t->get_anim();
+    if (a && a->invisible && !t->is_hero) {
+        return false;
+    }
+
+    bool lit    = false;
+    bool ground = t->is_floor || t->is_corridor || t->is_dirt;
+    if (t->room && t->room->is_lit) {
+        lit = true;
+    } else if (t->rendered == gh_rendered_this_frame) {
+        lit = true;
+    } else if (ground && light) {
+        lit = true;
+    } else if (ground && mem) {
+        lit = false;
+    } else if (t->has_been_seen) {
+        if (!t->is_water && !t->is_boring && !t->is_door && !t->is_exit) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    int rank = t->render_depth;
+    if (t->is_hero) {
+        rank += 1000;
+    } else if (t->is_monst && !t->is_dead) {
+        rank += 800;
+    } else if (ground) {
+        rank -= 300;
+    }
+    *lit_out  = lit;
+    *rank_out = rank;
+    return true;
+}
+
 void render_capture_map(gh_level *level, gh_thing *hero, const float *radii, int rays)
 {
     int w = render_map_w;
@@ -341,42 +407,10 @@ void render_capture_map(gh_level *level, gh_thing *hero, const float *radii, int
                 if (!t || !t->anim_frames) {
                     continue;
                 }
-                /* shielded things flicker; the hero only changes colour */
-                if (t->shielded() && !t->is_hero && (SDL_GetTicks() / 120) % 2) {
+                bool lit;
+                int  rank;
+                if (!thing_seen(t, light, mem, &lit, &rank)) {
                     continue;
-                }
-                const gh_anim_frame *a = t->get_anim();
-                if (a && a->invisible && !t->is_hero) {
-                    continue;
-                }
-
-                bool lit    = false;
-                bool ground = t->is_floor || t->is_corridor || t->is_dirt;
-                if (t->room && t->room->is_lit) {
-                    lit = true;
-                } else if (t->rendered == gh_rendered_this_frame) {
-                    lit = true;
-                } else if (ground && light) {
-                    /* the floor under the light polygon */
-                    lit = true;
-                } else if (ground && mem) {
-                    lit = false;
-                } else if (t->has_been_seen) {
-                    if (!t->is_water && !t->is_boring && !t->is_door && !t->is_exit) {
-                        continue;
-                    }
-                } else {
-                    continue;
-                }
-
-                /* the hero and monsters over items over the floor */
-                int rank = t->render_depth;
-                if (t->is_hero) {
-                    rank += 1000;
-                } else if (t->is_monst && !t->is_dead) {
-                    rank += 800;
-                } else if (t->is_floor || t->is_corridor || t->is_dirt) {
-                    rank -= 300;
                 }
                 if (rank >= best_rank) {
                     best_rank = rank;
@@ -404,33 +438,121 @@ void render_capture_map(gh_level *level, gh_thing *hero, const float *radii, int
             m.set = true;
         }
     }
+    if (render_zoom) {
+        render_zoom_map(level, hero, radii, rays);
+    }
     render_map_valid = true;
 
     /* a snapshot for the session log, once a second */
     uint32_t now = SDL_GetTicks();
     if (now - render_snapshot_ms >= 1000) {
         render_snapshot_ms = now;
-        if (getenv("GOBLINHACK_DEBUG_CELLS")) {
-            for (int dx = -2; dx <= 2; dx++) {
-                vector<gh_thing*> *v = level->map.isat(gh_point3d(c.x + dx, c.y, 0));
-                string names;
-                for (size_t i = 0; v && i < v->size(); i++) {
-                    gh_thing *t = (*v)[i];
-                    char b[200];
-                    snprintf(b, sizeof(b), " [%s floor=%d boring=%d anim=%p inv=%d light=%d]",
-                             t->short_name.c_str(), (int) t->is_floor, (int) t->is_boring,
-                             (void *) t->anim_frames, t->get_anim() ? (int) t->get_anim()->invisible : -1,
-                             (int) in_light(level, gh_point3d(c.x + dx, c.y, 0), radii, rays));
-                    names += b;
-                }
-                terminal_log("cell " + tostring(dx) + names);
-            }
-        }
         char line[160];
         snprintf(line, sizeof(line), "snapshot level %d at %d,%d map %dx%d view %dx%d",
                  (int) level->level_no, (int) c.x, (int) c.y,
                  (int) level->map.size.w, (int) level->map.size.h, w, h);
         terminal_log(line);
+    }
+}
+
+/*
+ * Tab: the zoomed view. Each thing drawn as its own picture of characters,
+ * as the windowed game draws it, one character a terminal cell (a map
+ * square is 6 by 6). Shows less of the dungeon, but every orc has its
+ * face. Same rules for what is seen; the hero in the middle.
+ */
+void render_toggle_zoom(void)
+{
+    render_zoom = !render_zoom;
+    terminal_log(render_zoom ? "zoom on" : "zoom off");
+}
+
+struct zoom_item {
+    gh_thing *t;
+    bool      lit;
+    int       rank;
+};
+
+static bool zoom_order(const zoom_item &a, const zoom_item &b) { return a.rank < b.rank; }
+
+static void render_zoom_map(gh_level *level, gh_thing *hero, const float *radii, int rays)
+{
+    int w = render_map_w;
+    int h = render_map_h;
+    const int res = level->map.res;
+    const int sq  = res / GH_RES_CHAR;
+
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            render_map[y][x].set = false;
+        }
+    }
+
+    gh_point3d c(hero->at.x / res, hero->at.y / res, 0);
+    int rx = w / sq / 2 + 3;
+    int ry = h / sq / 2 + 3;
+
+    std::vector<zoom_item> items;
+    for (int my = c.y - ry; my <= c.y + ry; my++) {
+        for (int mx = c.x - rx; mx <= c.x + rx; mx++) {
+            gh_point3d p(mx, my, 0);
+            if (p.x < 0 || p.y < 0 || p.x >= level->map.size.w || p.y >= level->map.size.h) {
+                continue;
+            }
+            vector<gh_thing*> *v = level->map.isat(p);
+            if (!v) {
+                continue;
+            }
+            uint8_t mem   = render_mem[(size_t) p.y * level->map.size.w + p.x];
+            bool    light = in_light(level, p, radii, rays);
+            for (size_t i = 0; i < v->size(); i++) {
+                gh_thing *t = (*v)[i];
+                bool lit;
+                int  rank;
+                if (thing_seen(t, light, mem, &lit, &rank)) {
+                    zoom_item z = { t, lit, rank };
+                    items.push_back(z);
+                }
+            }
+        }
+    }
+    std::stable_sort(items.begin(), items.end(), zoom_order);
+
+    for (size_t i = 0; i < items.size(); i++) {
+        gh_thing *t = items[i].t;
+        const gh_anim_frame *a = t->get_anim();
+        if (!a || a->cell.empty()) {
+            continue;
+        }
+        int ox = (t->at.x - hero->at.x) / GH_RES_CHAR + w / 2 - a->width / 2;
+        int oy = (t->at.y - hero->at.y) / GH_RES_CHAR + h / 2 - a->height / 2;
+        for (int ay = 0; ay < a->height; ay++) {
+            int y = oy + ay;
+            if (y < 0 || y >= h) {
+                continue;
+            }
+            for (int ax = 0; ax < a->width; ax++) {
+                int x = ox + ax;
+                if (x < 0 || x >= w) {
+                    continue;
+                }
+                const gh_anim_frame_cell &cell = a->cell[(size_t) ay * a->width + ax];
+                if (!cell.c || (cell.c == ' ' && cell.bg == GH_TERM_COLOR_BLACK)) {
+                    continue;
+                }
+                map_cell &m = render_map[y][x];
+                term_rgb fg = rgb_of(t->is_dead ? (uint8) GH_TERM_COLOR_GRAY_4 : cell.fg);
+                term_rgb bg = rgb_of(t->is_dead ? (uint8) GH_TERM_COLOR_BLACK : cell.bg);
+                if (!items[i].lit) {
+                    fg = dim(fg, 45);
+                    bg = dim(bg, 45);
+                }
+                m.ch  = (uint8) cell.c;
+                m.fg  = fg;
+                m.bg  = bg;
+                m.set = true;
+            }
+        }
     }
 }
 
@@ -443,7 +565,7 @@ void render_set_layout(int cols, int rows)
     GH_TERM_WIDTH  = std::min(cols, (int) GH_TERM_MAX_SIZE);
     GH_TERM_HEIGHT = std::min(rows, (int) GH_TERM_MAX_SIZE / 2);
     render_map_w   = std::max(10, GH_TERM_WIDTH - 23);
-    render_map_h   = std::max(5, GH_TERM_HEIGHT - 3);
+    render_map_h   = std::max(5, GH_TERM_HEIGHT - 5);
 }
 
 void render_compose(int cols, int rows)
@@ -495,5 +617,6 @@ void render_compose(int cols, int rows)
     }
 
     memset(render_term_set, 0, sizeof(render_term_set));
+    memset(render_opaque_cells, 0, sizeof(render_opaque_cells));
     render_map_valid = false;
 }

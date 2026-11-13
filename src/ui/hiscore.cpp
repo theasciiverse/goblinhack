@@ -49,9 +49,24 @@ void gh_ui_display_hiscores (gh_game *game)
 
     int y = GH_TERM_HEIGHT/2 - 12;
 
+    //
+    // On a console shorter than 46 rows: one row a score, starting under
+    // the banner, and only as many as fit above the intro's verse.
+    //
+    const bool short_console = GH_TERM_HEIGHT < 46;
+    const int last_y = GH_TERM_HEIGHT - 13;
+
+    if (short_console && y < 8) {
+        y = 8;
+    }
+
     bool first = true;
 
     while (h != game->hiscores->hiscores.end()) {
+
+        if (short_console && y >= last_y) {
+            break;
+        }
 
         const char *colors[gh_hiscore::max_displayed] = {
             "random",
@@ -107,7 +122,9 @@ void gh_ui_display_hiscores (gh_game *game)
                  killed_by_field_len,
                  killed_by.c_str());
 
-        gh_term_goto(0, y++);
+        if (!short_console) {
+            gh_term_goto(0, y++);
+        }
         gh_term_goto(0, y++);
 
         gh_term_putfmx(tmp);
