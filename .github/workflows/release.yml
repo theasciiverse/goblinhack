@@ -1,0 +1,139 @@
+# Builds Goblin Hack's terminal edition for the Asciiverse catalog and as
+# system packages.
+#
+# For av: one archive per target, named goblinhack-<target>.tar.gz, plus a
+# SHA256SUMS file, attached to a GitHub release (hub/catalog/SCHEMA.md,
+# release.source = "github"). Each archive holds the binary, the game's
+# files in resources/ beside it, the licence, readme, PATCHES.md and
+# UPSTREAM.md.
+# For everyone else: .deb, .rpm and Arch packages from the same Linux build,
+# made by nfpm (asciiverse/nfpm.yaml).
+#
+# Tags look like v1.20+20210926-av.1: upstream's version and the date of
+# the upstream commit, then our packaging release. Linux builds are glibc,
+# made in ubuntu:22.04 (SDL loads the system's sound library at run time);
+# macOS builds both architectures. SDL2 and SDL2_mixer are built from source
+# without video and linked statically (asciiverse/build.sh). No Windows
+# build: the terminal code reads the terminal through POSIX (termios, poll).
+# A release is published when Linux builds; macOS joins it when it builds.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "existing tag to build and release"
+        required: true
+
+env:
+  ID: goblinhack
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, arch: amd64 }
+          - { target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Build
+        run: |
+          docker run --rm -v "$PWD":/src -w /src ubuntu:22.04 sh asciiverse/build.sh
+          sudo chown -R "$(id -u):$(id -g)" .
+          ldd goblinhack
+
+      - name: Smoke test
+        run: |
+          sh asciiverse/stage.sh
+          cd stage && HOME="$RUNNER_TEMP/home" GOBLINHACK_SILENT=1 timeout 20 \
+            script -qec "./goblinhack --silent" /dev/null </dev/null >/dev/null 2>&1 || true
+          ls "$RUNNER_TEMP/home/.local/state/goblinhack"
+          grep -a "Starting game loop" "$RUNNER_TEMP/home/.local/state/goblinhack/stdout.txt"
+
+      - name: Package for av
+        run: |
+          mkdir -p dist
+          tar -czf "dist/$ID-${{ matrix.target }}.tar.gz" -C stage .
+
+      - name: System packages
+        run: |
+          v="${TAG#v}"; export VERSION="${v%%-av.*}" RELEASE="${v##*-av.}" ARCH="${{ matrix.arch }}"
+          for p in deb rpm archlinux; do
+            docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/src -w /src \
+              -e VERSION -e RELEASE -e ARCH goreleaser/nfpm:v2.43.0 \
+              package --config asciiverse/nfpm.yaml --packager "$p" --target dist/
+          done
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-apple-darwin, arch: x86_64 }
+          - { target: aarch64-apple-darwin, arch: arm64 }
+    runs-on: macos-15
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Build
+        run: |
+          command -v pkg-config >/dev/null || brew install pkg-config
+          CC_ARCH=${{ matrix.arch }} sh asciiverse/build.sh
+          otool -L goblinhack
+
+      - name: Package
+        run: |
+          sh asciiverse/stage.sh
+          mkdir -p dist
+          tar -czf "dist/$ID-${{ matrix.target }}.tar.gz" -C stage .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+
+  release:
+    needs: [linux, macos]
+    if: ${{ !cancelled() && needs.linux.result == 'success' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" -R "$GITHUB_REPOSITORY" --title "Goblin Hack $TAG" \
+                 --notes "Goblin Hack ${TAG%%-av.*}, the terminal edition, built for the Asciiverse catalog, with .deb, .rpm and Arch packages. See PATCHES.md and UPSTREAM.md."
+          gh release upload "$TAG" dist/* -R "$GITHUB_REPOSITORY" --clobber

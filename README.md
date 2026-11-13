@@ -1,3 +1,10 @@
+**In Asciiverse:** this is the terminal edition of Goblin Hack, built for
+the [Asciiverse](https://asciiverse.sh) catalog: `av install goblinhack`
+plays it in any terminal (100 by 30 or larger), with no window. Arrow keys
+walk, Space attacks, h for help, Tab shows every thing as its own picture.
+How it is made: [PATCHES.md](PATCHES.md); notes for upstream:
+[UPSTREAM.md](UPSTREAM.md). Build it with `make -f asciiverse/Makefile`.
+
 <pre>
   ____       _     _ _         _   _            _    
  / ___| ___ | |__ | (_)_ __   | | | | __ _  ___| | __

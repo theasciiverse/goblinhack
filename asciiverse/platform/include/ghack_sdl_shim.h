@@ -271,6 +271,41 @@ typedef struct SDL_SysWMinfo {
 
 typedef struct SDL_Thread SDL_Thread;
 
+/*
+ * The shim's own names, so it never meets a real SDL in the same link
+ * (the sound uses a static SDL2).
+ */
+#define IMG_Load ghack_IMG_Load
+#define SDL_BlitSurface ghack_SDL_BlitSurface
+#define SDL_ClearError ghack_SDL_ClearError
+#define SDL_ConvertSurface ghack_SDL_ConvertSurface
+#define SDL_CreateRGBSurface ghack_SDL_CreateRGBSurface
+#define SDL_CreateThread ghack_SDL_CreateThread
+#define SDL_Delay ghack_SDL_Delay
+#define SDL_FreeSurface ghack_SDL_FreeSurface
+#define SDL_GL_GetAttribute ghack_SDL_GL_GetAttribute
+#define SDL_GL_GetProcAddress ghack_SDL_GL_GetProcAddress
+#define SDL_GL_SetAttribute ghack_SDL_GL_SetAttribute
+#define SDL_GL_SwapBuffers ghack_SDL_GL_SwapBuffers
+#define SDL_GetError ghack_SDL_GetError
+#define SDL_GetKeyName ghack_SDL_GetKeyName
+#define SDL_GetTicks ghack_SDL_GetTicks
+#define SDL_GetVideoSurface ghack_SDL_GetVideoSurface
+#define SDL_GetWMInfo ghack_SDL_GetWMInfo
+#define SDL_Init ghack_SDL_Init
+#define SDL_LockSurface ghack_SDL_LockSurface
+#define SDL_PeepEvents ghack_SDL_PeepEvents
+#define SDL_PumpEvents ghack_SDL_PumpEvents
+#define SDL_PushEvent ghack_SDL_PushEvent
+#define SDL_Quit ghack_SDL_Quit
+#define SDL_SetEventFilter ghack_SDL_SetEventFilter
+#define SDL_SetVideoMode ghack_SDL_SetVideoMode
+#define SDL_ShowCursor ghack_SDL_ShowCursor
+#define SDL_UnlockSurface ghack_SDL_UnlockSurface
+#define SDL_WM_GrabInput ghack_SDL_WM_GrabInput
+#define SDL_WM_SetCaption ghack_SDL_WM_SetCaption
+#define SDL_WaitThread ghack_SDL_WaitThread
+
 #ifdef __cplusplus
 extern "C" {
 #endif

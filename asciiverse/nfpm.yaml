@@ -1,0 +1,44 @@
+# System packages (.deb, .rpm, Arch) for Goblin Hack's terminal edition,
+# built by nfpm from the same Linux build as the av archive. The release
+# workflow sets VERSION, RELEASE (our packaging release) and ARCH.
+#
+# The binary in /usr/bin, the game's files in /usr/share/goblinhack, where
+# the binary looks for them. No .desktop file on purpose: av is the one
+# place titles are started from, so Asciiverse packages add no menu entries.
+name: goblinhack
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+release: ${RELEASE}
+section: games
+priority: optional
+maintainer: Asciiverse <packages@asciiverse.sh>
+vendor: Asciiverse
+homepage: https://github.com/theasciiverse/goblinhack
+license: LGPL-2.0-or-later
+description: |
+  Goblin Hack, the ASCII dungeon romp, in the terminal.
+  Neil McGill's real-time dungeon game where every monster, item and wall
+  is a little picture made of characters: fight your way down through
+  dungeons, caves and forests, with spells, wands, potions and shops.
+  Goblin Hack by Neil McGill (goblinhack), in its terminal edition,
+  packaged by Asciiverse.
+contents:
+  - src: stage/goblinhack
+    dst: /usr/bin/goblinhack
+    file_info: { mode: 0755 }
+  - src: stage/resources
+    dst: /usr/share/goblinhack/resources
+    type: tree
+  - src: stage/LICENSE
+    dst: /usr/share/doc/goblinhack/copyright
+    file_info: { mode: 0644 }
+  - src: stage/README.md
+    dst: /usr/share/doc/goblinhack/README.md
+    file_info: { mode: 0644 }
+  - src: stage/PATCHES.md
+    dst: /usr/share/doc/goblinhack/PATCHES.md
+    file_info: { mode: 0644 }
+  - src: stage/UPSTREAM.md
+    dst: /usr/share/doc/goblinhack/UPSTREAM.md
+    file_info: { mode: 0644 }

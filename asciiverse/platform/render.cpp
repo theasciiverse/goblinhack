@@ -565,7 +565,7 @@ void render_set_layout(int cols, int rows)
     GH_TERM_WIDTH  = std::min(cols, (int) GH_TERM_MAX_SIZE);
     GH_TERM_HEIGHT = std::min(rows, (int) GH_TERM_MAX_SIZE / 2);
     render_map_w   = std::max(10, GH_TERM_WIDTH - 23);
-    render_map_h   = std::max(5, GH_TERM_HEIGHT - 5);
+    render_map_h   = std::max(5, GH_TERM_HEIGHT - 8); /* clear of the six message lines */
 }
 
 void render_compose(int cols, int rows)

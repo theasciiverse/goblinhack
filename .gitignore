@@ -1,3 +1,7 @@
 # Asciiverse terminal build
 /build-terminal/
 /build/config.h
+/avbuild/
+/stage/
+/dist/
+/goblinhack
