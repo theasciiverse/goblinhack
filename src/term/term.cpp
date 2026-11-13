@@ -21,6 +21,9 @@
     $Id: term.cpp 1070 2008-08-11 23:30:42Z Goblinhack $
 */
 
+#ifdef GHACK_TERMINAL
+#include <ghack_render.h>
+#endif
 #include <ghack.h>
 #include <gh_console.h>
 #include <gh_term.h>
@@ -63,6 +66,13 @@ void gh_term_init (void)
     //
     GH_TERM_WIDTH = 100;
     GH_TERM_HEIGHT = 46;
+
+#ifdef GHACK_TERMINAL
+    //
+    // In a terminal the console is the terminal: as wide and tall as it is.
+    //
+    render_set_layout(terminal_cols(), terminal_rows());
+#endif
 }
 
 void gh_term_exit (void)

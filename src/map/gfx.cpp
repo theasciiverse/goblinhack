@@ -21,6 +21,9 @@
     $Id: gfx.cpp 1289 2009-08-12 15:53:40Z Goblinhack $
 */
 
+#ifdef GHACK_TERMINAL
+#include <ghack_render.h>
+#endif
 #include <ghack.h>
 #include <gh_level.h>
 #include <gh_game.h>
@@ -1292,6 +1295,10 @@ void gh_player::display_map (void)
     old_scale = scale;
 
     glPopMatrix(); // }
+
+#ifdef GHACK_TERMINAL
+    render_capture_map(level, thing, hero ? radii : NULL, how_many_light_rays);
+#endif
 }
 
 void gh_player::level_editor_display_map (void)

@@ -21,6 +21,9 @@
     $Id: console.cpp 1288 2009-08-12 15:44:29Z Goblinhack $
 */
 
+#ifdef GHACK_TERMINAL
+#include <ghack_render.h>
+#endif
 #include <ghack.h>
 #include <gh_surface.h>
 #include <gh_console.h>
@@ -527,6 +530,10 @@ void gh_console::putf_at (string text, gh_point3d at)
 void gh_term_refresh (void)
 {
     GH_FUNCTION()
+
+#ifdef GHACK_TERMINAL
+    render_capture_term();
+#endif
 
     gh_point p;
 

@@ -21,6 +21,9 @@
     $Id: global.cpp 1265 2009-08-02 15:59:12Z Ghack $
 */
 
+#ifdef GHACK_TERMINAL
+#include <ghack_render.h>
+#endif
 #include <ghack.h>
 #include <gh_global.h>
 #include <gh_screen.h>
@@ -84,6 +87,16 @@ gh_global::gh_global (const string gh_cfg_file)
     gh_global::systemPath.push_back("/src/resources");
     gh_global::systemPath.push_back("/resources");
     gh_global::systemPath.push_back("");
+
+#ifdef GHACK_TERMINAL
+    //
+    // The game's files beside the binary (av), or in the source tree.
+    //
+    gh_global::systemPath.push_back(terminal_exe_dir() + "/resources");
+    gh_global::systemPath.push_back(terminal_exe_dir() + "/src/resources");
+    gh_global::systemPath.push_back(terminal_exe_dir() + "/../src/resources");
+    gh_global::systemPath.push_back(terminal_exe_dir() + "/../share/goblinhack/resources");
+#endif
 
     //
     // The installed path.

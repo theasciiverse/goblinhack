@@ -67,7 +67,13 @@ int main (int argc, char *argv[])
     // Download the next version of the game. If already downloaded, kick
     // off the .exe to do the install.
     //
+#ifndef GHACK_TERMINAL
+    //
+    // The terminal edition is installed and updated by its package or
+    // launcher; it never downloads anything itself.
+    //
     gh_main_installer();
+#endif
 
     if (!freopen("stdout.txt", "w", stdout)) {
 	GH_LOG("Failed to open stdout.txt");
